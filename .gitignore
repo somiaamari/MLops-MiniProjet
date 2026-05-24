@@ -1,0 +1,88 @@
+# ──────────────────────────────────────────────
+#  Python
+# ──────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg
+*.egg-info/
+dist/
+build/
+eggs/
+parts/
+var/
+sdist/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+.installed.cfg
+lib/
+lib64/
+
+# ──────────────────────────────────────────────
+#  Virtual Environments
+# ──────────────────────────────────────────────
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# ──────────────────────────────────────────────
+#  Nested repo snapshot (old copy — not for push)
+# ──────────────────────────────────────────────
+Smart-Home-project/
+
+# ──────────────────────────────────────────────
+#  Dataset (large file — do NOT commit)
+# ──────────────────────────────────────────────
+data/smart_home_dataset.csv
+data/raw/
+*.csv
+*.parquet
+
+# ──────────────────────────────────────────────
+#  MLflow artifacts
+# ──────────────────────────────────────────────
+mlruns/
+mlops_smart_home/mlruns/
+frequent_itemsets.csv
+association_rules.csv
+predictions.csv
+feature_store.parquet
+monitoring_data.csv
+model_registry/
+
+# ──────────────────────────────────────────────
+#  Generated static plots
+# ──────────────────────────────────────────────
+static/top_rules_confidence.png
+
+# ──────────────────────────────────────────────
+#  OS / IDE
+# ──────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# ──────────────────────────────────────────────
+#  Jupyter
+# ──────────────────────────────────────────────
+.ipynb_checkpoints/
+*.ipynb
+
+# ──────────────────────────────────────────────
+#  Logs
+# ──────────────────────────────────────────────
+*.log
+logs/
