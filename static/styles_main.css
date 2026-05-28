@@ -1,0 +1,110 @@
+/* General Styles */
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #f8f9fa; /* Light gray background */
+    color: #333; /* Dark gray text */
+}
+
+/* Container Styles */
+.container {
+    max-width: 900px;
+    margin: 2rem auto;
+    padding: 1.5rem;
+    background-color: #ffffff; /* White background for content */
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Subtle shadow */
+}
+
+/* Header Styles */
+h1 {
+    font-size: 2rem;
+    color: #007bff; /* Bootstrap blue */
+    text-align: center;
+    margin-bottom: 1rem;
+}
+
+h2, h3 {
+    margin-top: 1.5rem;
+    color: #0056b3; /* Darker blue for subheadings */
+}
+
+/* Table Styles */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 1rem;
+}
+
+table th, table td {
+    border: 1px solid #dee2e6; /* Light gray borders */
+    padding: 0.75rem;
+    text-align: left;
+}
+
+table th {
+    background-color: #007bff; /* Bootstrap blue */
+    color: white;
+}
+
+table tr:nth-child(even) {
+    background-color: #f2f2f2; /* Alternate row background */
+}
+
+/* Form Styles */
+form {
+    margin-top: 1.5rem;
+    display: flex;
+    flex-direction: column;
+}
+
+form input {
+    padding: 0.5rem;
+    border: 1px solid #ced4da; /* Light gray border */
+    border-radius: 4px;
+    margin-bottom: 1rem;
+}
+
+form button {
+    padding: 0.5rem;
+    background-color: #007bff; /* Bootstrap blue */
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+form button:hover {
+    background-color: #0056b3; /* Darker blue on hover */
+}
+
+/* Recommendations List */
+#recommendations {
+    list-style-type: none;
+    padding: 0;
+    margin-top: 1rem;
+}
+
+#recommendations li {
+    background-color: #e9ecef; /* Light gray item background */
+    margin: 0.5rem 0;
+    padding: 0.75rem;
+    border-radius: 4px;
+}
+
+/* Responsive Design */
+@media (max-width: 600px) {
+    .container {
+        padding: 1rem;
+    }
+
+    table th, table td {
+        font-size: 0.875rem;
+    }
+
+    form input, form button {
+        font-size: 0.875rem;
+    }
+}

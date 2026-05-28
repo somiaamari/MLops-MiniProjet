@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Home Association Rules</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <h1>Smart Home Association Rules and Recommendations</h1>
+
+    <section>
+        <h2>Top Association Rules</h2>
+        <table border="1">
+            <thead>
+                <tr>
+                    <th>Antecedents</th>
+                    <th>Consequents</th>
+                    <th>Confidence</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for rule in top_rules %}
+                    <tr>
+                        <td>{{ rule['antecedents'] }}</td>
+                        <td>{{ rule['consequents'] }}</td>
+                        <td>{{ rule['confidence'] }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </section>
+
+    <section>
+        <h2>Top Rules Visualization</h2>
+        <img src="{{ url_for('static', filename='top_rules_confidence.png') }}" alt="Top Rules Confidence Visualization">
+    </section>
+
+    <section>
+        <h2>Enter New Data</h2>
+        <form id="data-form">
+            <label for="timestamp">Timestamp (YYYY-MM-DD HH:MM:SS):</label>
+            <input type="text" id="timestamp" name="timestamp" required><br><br>
+
+            <label for="activity">Activity:</label>
+            <input type="text" id="activity" name="activity" required><br><br>
+
+            <label for="mainDoorLock">Main Door Lock (1 for locked, 0 for unlocked):</label>
+            <input type="number" id="mainDoorLock" name="mainDoorLock" required><br><br>
+
+            <label for="bed">Bed (1 for occupied, 0 for empty):</label>
+            <input type="number" id="bed" name="bed" required><br><br>
+
+            <label for="bedroomCarp">Bedroom Carpet (1 for present, 0 for not present):</label>
+            <input type="number" id="bedroomCarp" name="bedroomCarp" required><br><br>
+
+            <label for="wardrobe">Wardrobe (1 for present, 0 for not present):</label>
+            <input type="number" id="wardrope" name="wardrobe" required><br><br>
+
+            <label for="tv">TV (1 for present, 0 for not present):</label>
+            <input type="number" id="tv" name="tv" required><br><br>
+
+            <label for="oven">Oven (1 for present, 0 for not present):</label>
+            <input type="number" id="oven" name="oven" required><br><br>
+
+            <label for="officeLight">Office Light (1 for present, 0 for not present):</label>
+            <input type="number" id="officeLight" name="officeLight" required><br><br>
+
+            <input type="submit" value="Submit Data">
+        </form>
+    </section>
+
+    <section>
+        <h2>Get Recommendations</h2>
+        <form id="recommendation-form">
+            <label for="user-input">Enter Items (comma separated):</label>
+            <input type="text" id="user-input" name="user-input" required><br><br>
+            <input type="submit" value="Get Recommendations">
+        </form>
+        <ul id="recommendations-list"></ul>
+    </section>
+
+     
+
+    <script>
+        // Handle data form submission
+        document.getElementById('data-form').addEventListener('submit', function(event) {
+            event.preventDefault();
+            const formData = new FormData(event.target);
+            const data = {};
+            formData.forEach((value, key) => {
+                data[key] = value;
+            });
+
+            fetch('/recommend', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ user_data: data })
+            })
+            .then(response => response.json())
+            .then(data => {
+                const recommendationsList = document.getElementById('recommendations-list');
+                recommendationsList.innerHTML = ''; // Clear existing recommendations
+
+                data.recommendations.forEach(function(rec) {
+                    const listItem = document.createElement('li');
+                    listItem.textContent = 'Recommendation: ' + rec.join(', ');
+                    recommendationsList.appendChild(listItem);
+                });
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        });
+    </script>
+</body>
+</html>

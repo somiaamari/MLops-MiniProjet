@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Home Rules Tester</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 20px;
+        }
+        .panel {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .device-group {
+            border-bottom: 1px solid #eee;
+            padding: 10px 0;
+        }
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 34px;
+        }
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 34px;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 26px;
+            width: 26px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        input:checked + .slider {
+            background-color: #2196F3;
+        }
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+        h2 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+        .device-label {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+            margin: 5px 0;
+        }
+        .rule-item {
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 4px;
+            background-color: #f8f9fa;
+            transition: background-color 0.3s;
+        }
+        .rule-item.triggered {
+            background-color: #e3f2fd;
+            border-left: 4px solid #2196F3;
+        }
+    </style>
+</head>
+<body>
+    <h1>Smart Home Control Panel</h1>
+    <div class="container">
+        <div class="panel">
+            <h2>Devices</h2>
+            <div id="device-controls">
+                <!-- Device controls will be populated here -->
+            </div>
+        </div>
+
+        <div class="panel">
+            <h2>Triggered Rules</h2>
+            <div id="rules-display"></div>
+        </div>
+    </div>
+
+    <script>
+        let activeDevices = new Set();
+        let rules = [];
+        let autoActivatedDevices = new Set();
+        let deviceRelationships = {
+            bed: ["bedroomCarp", "bedroomDoor"],
+            couch: ["livingLight", "livingCarp"],
+            tv: ["livingLight"],
+            mainDoorLock: ["bedroomDoor"]
+        };
+
+        // Simulated database for pipeline statuses
+        let pipeline_status = {
+            "feature_engineering": "Not started",
+            "training": "Not started",
+            "inference": "Not started",
+            "monitoring": "Not started",
+        };
+
+        // Simulated predictions and performance metrics
+        let batch_predictions = [];
+        let performance_metrics = {
+            "accuracy": null,
+            "precision": null,
+            "recall": null,
+        };
+
+        // Simulated pipeline functions
+        function run_feature_engineering() {
+            pipeline_status["feature_engineering"] = "Running";
+            console.log("Running feature engineering pipeline...");
+            setTimeout(() => {
+                pipeline_status["feature_engineering"] = "Completed";
+            }, 2000);
+        }
+
+        function run_training() {
+            pipeline_status["training"] = "Running";
+            console.log("Running training pipeline...");
+            setTimeout(() => {
+                performance_metrics["accuracy"] = 0.95;
+                performance_metrics["precision"] = 0.93;
+                performance_metrics["recall"] = 0.92;
+                pipeline_status["training"] = "Completed";
+            }, 3000);
+        }
+
+        function run_inference(features) {
+            pipeline_status["inference"] = "Running";
+            console.log("Running inference pipeline...");
+            setTimeout(() => {
+                batch_predictions = features.map((feature, index) => ({
+                    "input": feature,
+                    "prediction": `Class ${index % 2}`,
+                }));
+                pipeline_status["inference"] = "Completed";
+                checkRules();
+            }, 1500);
+        }
+
+        function run_monitoring() {
+            pipeline_status["monitoring"] = "Running";
+            console.log("Running monitoring pipeline...");
+            setTimeout(() => {
+                pipeline_status["monitoring"] = "Completed";
+            }, 1000);
+        }
+
+        async function loadRules() {
+            try {
+                const response = await fetch("http://localhost:8000/rules/");
+                rules = await response.json();
+                console.log("Loaded rules:", rules);
+            } catch (error) {
+                console.error("Error loading rules:", error);
+            }
+        }
+
+        function handleDeviceToggle(device, isOn) {
+            const checkbox = document.querySelector(`input[data-device="${device}"]`);
+            
+            if (isOn) {
+                activeDevices.add(device);
+                if (autoActivatedDevices.has(device)) {
+                    autoActivatedDevices.delete(device);
+                }
+            } else {
+                activeDevices.delete(device);
+                autoActivatedDevices.delete(device);
+                turnOffRelatedDevices(device);
+            }
+
+            checkRules();
+        }
+
+        function checkRules() {
+            const triggeredRules = rules.filter(rule =>
+                rule.antecedent.every(condition => activeDevices.has(condition))
+            );
+
+            triggeredRules.forEach(rule => {
+                rule.consequent.forEach(device => {
+                    const checkbox = document.querySelector(`input[data-device="${device}"]`);
+                    if (checkbox && !activeDevices.has(device)) {
+                        checkbox.checked = true;
+                        activeDevices.add(device);
+                        autoActivatedDevices.add(device);
+                    }
+                });
+            });
+
+            displayTriggeredRules(triggeredRules);
+        }
+
+        function displayTriggeredRules(triggeredRules) {
+            const rulesDisplay = document.getElementById('rules-display');
+            if (triggeredRules.length === 0) {
+                rulesDisplay.innerHTML = '<p>No rules currently triggered.</p>';
+                return;
+            }
+
+            rulesDisplay.innerHTML = triggeredRules.map(rule => `
+                <div class="rule-item triggered">
+                    <strong>Rule:</strong> IF ${rule.antecedent.join(' AND ')} THEN ${rule.consequent.join(' AND ')}
+                    <div class="metrics">
+                        Confidence: ${rule.confidence.toFixed(2)}% | Support: ${rule.support.toFixed(2)}%
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function turnOffRelatedDevices(device) {
+            if (deviceRelationships[device]) {
+                deviceRelationships[device].forEach(relatedDevice => {
+                    const checkbox = document.querySelector(`input[data-device="${relatedDevice}"]`);
+                    if (checkbox && checkbox.checked) {
+                        checkbox.checked = false;
+                        handleDeviceToggle(relatedDevice, false);
+                    }
+                });
+            }
+        }
+
+        async function init() {
+            await loadRules();
+
+            const deviceControls = document.getElementById("device-controls");
+            const devices = [
+                { name: "bed", label: "Bed" },
+                { name: "bedroomCarp", label: "Bedroom Carpet" },
+                { name: "bedroomDoor", label: "Bedroom Door" },
+                { name: "couch", label: "Couch" },
+                { name: "tv", label: "TV" },
+                { name: "livingLight", label: "Living Room Light" },
+                { name: "livingCarp", label: "Living Room Carpet" },
+                { name: "mainDoorLock", label: "Main Door Lock" }
+            ];
+
+            devices.forEach(device => {
+                const deviceLabel = document.createElement("div");
+                deviceLabel.className = "device-label";
+                deviceLabel.innerHTML = `
+                    <span class="device-name">${device.label}</span>
+                    <label class="switch">
+                        <input type="checkbox" data-device="${device.name}" onchange="handleDeviceToggle('${device.name}', this.checked)">
+                        <span class="slider"></span>
+                    </label>
+                `;
+                deviceControls.appendChild(deviceLabel);
+            });
+        }
+
+        init();
+    </script>
+</body>
+</html>

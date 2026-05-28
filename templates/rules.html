@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Association Rules</title>
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <h1>Association Rules</h1>
+    <table>
+        <tr>
+            <th>Rule</th>
+            <th>Support (%)</th>
+            <th>Confidence (%)</th>
+            <th>Lift</th>
+        </tr>
+        {% for rule in rules %}
+        <tr>
+            <td>{{ rule.rule }}</td>
+            <td>{{ rule.support }}</td>
+            <td>{{ rule.confidence }}</td>
+            <td>{{ rule.lift }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+    <a href="/">Go Back</a>
+</body>
+</html>

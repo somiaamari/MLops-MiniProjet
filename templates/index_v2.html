@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Home Insights</title>
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+
+<body>
+    <h1>Welcome to Smart Home Insights</h1>
+    <p>Discover patterns in your smart home usage.</p>
+    <h2>Top Frequent Itemsets</h2>
+    <table>
+        <tr>
+            <th>Itemset</th>
+            <th>Support (%)</th>
+        </tr>
+        {% for itemset in frequent_itemsets %}
+        <tr>
+            <td>{{ itemset.itemsets }}</td>
+            <td>{{ itemset.support * 100 | round(2) }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+    <a href="/rules">View Association Rules</a>
+</body>
+
+</html>
