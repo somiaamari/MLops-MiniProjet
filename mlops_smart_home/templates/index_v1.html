@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Home Rules Tester with MLOps</title>
+    <style>
+        /* Previous styles remain the same */
+        .metrics-panel {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            margin-top: 20px;
+        }
+
+        .metric-card {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+
+        .drift-warning {
+            background-color: #fff3cd;
+            color: #856404;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+
+        .monitoring-history {
+            margin-top: 20px;
+        }
+
+        .chart-container {
+            height: 300px;
+            margin-top: 20px;
+        }
+    </style>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+</head>
+
+<body>
+    <h1>Smart Home Control Panel</h1>
+    <div class="container">
+        <!-- Previous device and rules panels remain the same -->
+        <div class="panel">
+            <h2>Devices</h2>
+            <div id="device-controls">
+                <!-- Device controls -->
+            </div>
+        </div>
+        
+        <div class="panel">
+            <h2>Triggered Rules</h2>
+            <div id="rules-display"></div>
+        </div>
+
+        <div class="metrics-panel">
+            <h2>Model Monitoring</h2>
+            <div id="monitoring-metrics">
+                <div class="metric-card">
+                    <h3>Current Metrics</h3>
+                    <div id="current-metrics"></div>
+                </div>
+                <div id="drift-warning"></div>
+            </div>
+            <div class="monitoring-history">
+                <h3>Monitoring History</h3>
+                <div id="metrics-chart" class="chart-container"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Previous device and rules logic remains the same
+        let activeDevices = new Set();
+            let rules = [];
+            let autoActivatedDevices = new Set();
+            let deviceRelationships = {
+                bed: ["bedroomCarp", "bedroomDoor"],
+                couch: ["livingLight", "livingCarp"],
+                tv: ["livingLight"],
+                mainDoorLock: ["bedroomDoor"]
+            };
+
+            // Load rules from backend
+           async function loadRules() {
+                try {
+                    const response = await fetch("http://192.168.43.84:5001/train");  // Ensure URL is correct
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! Status: ${response.status}`);  // Handle non-2xx status codes
+                    }
+                    const rules = await response.json();  // Parse the JSON response
+                    console.log("Loaded rules:", rules);  // Log the loaded rules to the console
+                } catch (error) {
+                    console.error("Error loading rules:", error);  // Log any errors
+                }
+            }
+
+
+            // Turn off related devices
+            function turnOffRelatedDevices(device) {
+                if (deviceRelationships[device]) {
+                    deviceRelationships[device].forEach(relatedDevice => {
+                        const checkbox = document.querySelector(`input[data-device="${relatedDevice}"]`);
+                        if (checkbox && checkbox.checked) {
+                            checkbox.checked = false;
+                            handleDeviceToggle(relatedDevice, false);
+                        }
+                    });
+                }
+            }
+
+            // Handle device toggle
+            function handleDeviceToggle(device, isOn) {
+                const checkbox = document.querySelector(`input[data-device="${device}"]`);
+
+                if (isOn) {
+                    activeDevices.add(device);
+
+                    // Remove from autoActivatedDevices if manually turned on
+                    if (autoActivatedDevices.has(device)) {
+                        autoActivatedDevices.delete(device);
+                    }
+                } else {
+                    activeDevices.delete(device);
+
+                    // Prevent auto-activation of this device in current check
+                    autoActivatedDevices.delete(device);
+
+                    // Turn off related devices when a main device is turned off
+                    turnOffRelatedDevices(device);
+                }
+
+                // Check rules again
+                checkRules();
+            }
+
+            // Check triggered rules
+            function checkRules() {
+                const triggeredRules = rules.filter(rule =>
+                    rule.antecedent.every(condition => activeDevices.has(condition))
+                );
+
+                // Auto-activate devices for triggered rules, 
+                // but only if not manually turned off
+                triggeredRules.forEach(rule => {
+                    rule.consequent.forEach(device => {
+                        const checkbox = document.querySelector(`input[data-device="${device}"]`);
+
+                        // Only auto-activate if device is not in activeDevices (manually turned off)
+                        if (checkbox && !activeDevices.has(device)) {
+                            checkbox.checked = true;
+                            activeDevices.add(device);
+                            autoActivatedDevices.add(device);
+                        }
+                    });
+                });
+
+                // Display triggered rules
+                displayTriggeredRules(triggeredRules);
+            }
+
+            // Display triggered rules
+            function displayTriggeredRules(triggeredRules) {
+                const rulesDisplay = document.getElementById('rules-display');
+                if (triggeredRules.length === 0) {
+                    rulesDisplay.innerHTML = '<p>No rules currently triggered.</p>';
+                    return;
+                }
+
+                rulesDisplay.innerHTML = triggeredRules.map(rule => `
+                <div class="rule-item triggered">
+                    <strong>Rule:</strong> IF ${rule.antecedent.join(' AND ')} THEN ${rule.consequent.join(' AND ')}
+                    <div class="metrics">
+                        Confidence: ${rule.confidence.toFixed(2)}% | Support: ${rule.support.toFixed(2)}%
+                    </div>
+                </div>
+            `).join('');
+            }
+
+            // Initialize devices and rules
+            async function init() {
+                await loadRules();
+
+                const deviceControls = document.getElementById("device-controls");
+                const devices = [
+                    { name: "bed", label: "Bed" },
+                    { name: "bedroomCarp", label: "Bedroom Carpet" },
+                    { name: "bedroomDoor", label: "Bedroom Door" },
+                    { name: "couch", label: "Couch" },
+                    { name: "tv", label: "TV" },
+                    { name: "livingLight", label: "Living Room Light" },
+                    { name: "livingCarp", label: "Living Room Carpet" },
+                    { name: "mainDoorLock", label: "Main Door Lock" }
+                ];
+
+                devices.forEach(device => {
+                    const deviceLabel = document.createElement("div");
+                    deviceLabel.className = "device-label";
+                    deviceLabel.innerHTML = `
+                    <span class="device-name">${device.label}</span>
+                    <label class="switch">
+                        <input type="checkbox" data-device="${device.name}" onchange="handleDeviceToggle('${device.name}', this.checked)">
+                        <span class="slider"></span>
+                    </label>
+                `;
+                    deviceControls.appendChild(deviceLabel);
+                });
+            }
+
+            
+
+        // New monitoring-related functions
+        async function fetchMonitoringMetrics() {
+            try {
+                const response = await fetch('http://localhost:5001/monitor');
+                const data = await response.json();
+                displayMetrics(data);
+                updateMonitoringChart(data);
+            } catch (error) {
+                console.error('Error fetching monitoring metrics:', error);
+            }
+        }
+
+        function displayMetrics(data) {
+            const metricsDiv = document.getElementById('current-metrics');
+            const driftWarning = document.getElementById('drift-warning');
+
+            metricsDiv.innerHTML = `
+                <p>Support Drift: ${data.drift_scores.support_drift.toFixed(3)}</p>
+                <p>Confidence Drift: ${data.drift_scores.confidence_drift.toFixed(3)}</p>
+                <p>Rules Count Drift: ${data.drift_scores.rules_count_drift.toFixed(3)}</p>
+                <p>Coverage Drift: ${data.drift_scores.coverage_drift.toFixed(3)}</p>
+                <p>Last Updated: ${new Date(data.monitoring_timestamp).toLocaleString()}</p>
+            `;
+
+            if (data.needs_retraining) {
+                driftWarning.innerHTML = `
+                    <strong>Warning:</strong> Significant pattern drift detected. Model retraining recommended.
+                `;
+            } else {
+                driftWarning.innerHTML = '';
+            }
+        }
+
+        function updateMonitoringChart(data) {
+            const metricsChart = document.getElementById('metrics-chart');
+
+            const traces = [{
+                x: data.history.map(h => h.timestamp),
+                y: data.history.map(h => h.metrics.support_drift),
+                name: 'Support Drift',
+                type: 'scatter'
+            }, {
+                x: data.history.map(h => h.timestamp),
+                y: data.history.map(h => h.metrics.confidence_drift),
+                name: 'Confidence Drift',
+                type: 'scatter'
+            }];
+
+            const layout = {
+                title: 'Drift Metrics Over Time',
+                xaxis: { title: 'Time' },
+                yaxis: { title: 'Drift Score' }
+            };
+
+            Plotly.newPlot('metrics-chart', traces, layout);
+        }
+
+        // Update monitoring metrics periodically
+        setInterval(fetchMonitoringMetrics, 60000); // Update every minute
+
+        // Initialize everything
+        async function init() {
+            await loadRules();
+            await fetchMonitoringMetrics();
+            // Previous device initialization remains the same
+        }
+
+        init();
+    </script>
+</body>
+
+</html>

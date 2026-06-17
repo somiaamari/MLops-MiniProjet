@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<!-- Previous head content remains the same -->
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Home Control Panel</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #2563eb;
+            --secondary-color: #1e40af;
+            --success-color: #16a34a;
+            --warning-color: #ca8a04;
+            --error-color: #dc2626;
+            --background-color: #f8fafc;
+            --card-background: #ffffff;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: system-ui, -apple-system, sans-serif;
+        }
+
+        body {
+            background-color: var(--background-color);
+            color: var(--text-primary);
+            line-height: 1.5;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .header {
+            background-color: var(--card-background);
+            padding: 1.5rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            margin-bottom: 2rem;
+        }
+
+        h1,
+        h2,
+        h3 {
+            color: var(--text-primary);
+            margin-bottom: 1rem;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .card {
+            background-color: var(--card-background);
+            padding: 1.5rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .device-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+
+        .device-card {
+            background: var(--card-background);
+            padding: 1rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 34px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 34px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 26px;
+            width: 26px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked+.slider {
+            background-color: var(--primary-color);
+        }
+
+        input:checked+.slider:before {
+            transform: translateX(26px);
+        }
+
+        .metrics-panel {
+            margin-top: 2rem;
+        }
+
+        .metric-card {
+            background-color: var(--card-background);
+            padding: 1rem;
+            border-radius: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .metric-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+
+        .drift-warning {
+            background-color: #fff3cd;
+            color: #856404;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .drift-warning svg {
+            width: 24px;
+            height: 24px;
+        }
+
+        .chart-container {
+            height: 400px;
+            margin-top: 1rem;
+        }
+
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+            font-size: 1.2rem;
+            color: var(--text-secondary);
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+
+            .grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+        <div class="container">
+            <div class="header">
+                <h1>Smart Home Control Panel</h1>
+            </div>
+        
+            <div class="grid">
+                <div class="card">
+                    <h2>Devices</h2>
+                    <div class="device-grid" id="device-controls"></div>
+                </div>
+        
+                <div class="card">
+                    <h2>Active Rules</h2>
+                    <div id="rules-display"></div>
+                </div>
+            </div>
+        
+            <div class="metrics-panel">
+                <h2>System Monitoring</h2>
+                <div id="monitoring-metrics">
+                    <div class="metric-card">
+                        <h3>Current Metrics</h3>
+                        <div id="current-metrics" class="grid"></div>
+                    </div>
+                    <div id="drift-warning"></div>
+                </div>
+                <div class="card">
+                    <h3>Monitoring History</h3>
+                    <div id="metrics-chart" class="chart-container"></div>
+                </div>
+            </div>
+        </div>
+    <script>
+        let activeDevices = new Set();
+        let rules = [];
+        let autoActivatedDevices = new Set();
+        let deviceRelationships = {
+            bed: ["bedroomCarp", "bedroomDoor"],
+            couch: ["livingLight", "livingCarp"],
+            tv: ["livingLight"],
+            mainDoorLock: ["bedroomDoor"]
+        };
+
+        // Add the missing handleDeviceToggle function
+        function handleDeviceToggle(device, isOn) {
+            console.log(`Toggle device: ${device}, state: ${isOn}`);
+
+            if (isOn) {
+                activeDevices.add(device);
+                if (autoActivatedDevices.has(device)) {
+                    autoActivatedDevices.delete(device);
+                }
+            } else {
+                activeDevices.delete(device);
+                autoActivatedDevices.delete(device);
+                turnOffRelatedDevices(device);
+            }
+
+            // Update display and check rules
+            updateDeviceDisplay();
+            checkRules();
+        }
+
+        function turnOffRelatedDevices(device) {
+            if (deviceRelationships[device]) {
+                deviceRelationships[device].forEach(relatedDevice => {
+                    const checkbox = document.querySelector(`input[data-device="${relatedDevice}"]`);
+                    if (checkbox && checkbox.checked) {
+                        checkbox.checked = false;
+                        handleDeviceToggle(relatedDevice, false);
+                    }
+                });
+            }
+        }
+
+        function updateDeviceDisplay() {
+            // Update visual state of devices
+            document.querySelectorAll('input[data-device]').forEach(checkbox => {
+                const deviceName = checkbox.getAttribute('data-device');
+                checkbox.checked = activeDevices.has(deviceName);
+            });
+        }
+
+        function checkRules() {
+            const triggeredRules = rules.filter(rule => {
+                // Convert antecedents to array if it's not already
+                const antecedents = Array.isArray(rule.antecedents) ? rule.antecedents : [rule.antecedents];
+                return antecedents.every(device => activeDevices.has(device));
+            });
+
+            // Auto-activate devices based on rules
+            triggeredRules.forEach(rule => {
+                // Convert consequents to array if it's not already
+                const consequents = Array.isArray(rule.consequents) ? rule.consequents : [rule.consequents];
+                consequents.forEach(device => {
+                    if (!activeDevices.has(device)) {
+                        const checkbox = document.querySelector(`input[data-device="${device}"]`);
+                        if (checkbox) {
+                            checkbox.checked = true;
+                            activeDevices.add(device);
+                            autoActivatedDevices.add(device);
+                        }
+                    }
+                });
+            });
+
+            // Display triggered rules
+            displayTriggeredRules(triggeredRules);
+        }
+
+        function displayTriggeredRules(triggeredRules) {
+            const rulesDisplay = document.getElementById('rules-display');
+            if (triggeredRules.length === 0) {
+                rulesDisplay.innerHTML = '<div class="metric-card">No rules currently triggered.</div>';
+                return;
+            }
+
+            rulesDisplay.innerHTML = triggeredRules.map(rule => `
+                <div class="metric-card">
+                    <strong>Rule Triggered:</strong>
+                    <p>IF ${Array.isArray(rule.antecedents) ? rule.antecedents.join(' AND ') : rule.antecedents}
+                    THEN ${Array.isArray(rule.consequents) ? rule.consequents.join(' AND ') : rule.consequents}</p>
+                    <div class="metric-value">
+                        Confidence: ${(rule.confidence * 100).toFixed(1)}% | Support: ${(rule.support * 100).toFixed(1)}%
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Keep the previous loadRules, fetchMonitoringMetrics, displayMetrics, 
+        // updateMonitoringChart, and showError functions as they were
+
+        // Update the init function to include device initialization
+        async function init() {
+            try {
+                await loadRules();
+                await fetchMonitoringMetrics();
+
+                // Initialize devices
+                const deviceControls = document.getElementById("device-controls");
+                const devices = [
+                    { name: "bed", label: "Bed" },
+                    { name: "bedroomCarp", label: "Bedroom Carpet" },
+                    { name: "bedroomDoor", label: "Bedroom Door" },
+                    { name: "couch", label: "Couch" },
+                    { name: "tv", label: "TV" },
+                    { name: "livingLight", label: "Living Room Light" },
+                    { name: "livingCarp", label: "Living Room Carpet" },
+                    { name: "mainDoorLock", label: "Main Door Lock" }
+                ];
+
+                deviceControls.innerHTML = devices.map(device => `
+                    <div class="device-card">
+                        <span>${device.label}</span>
+                        <label class="switch">
+                            <input type="checkbox" data-device="${device.name}" onchange="handleDeviceToggle('${device.name}', this.checked)">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                `).join('');
+
+                // Set up monitoring updates
+                setInterval(fetchMonitoringMetrics, 60000);
+            } catch (error) {
+                console.error("Initialization error:", error);
+                showError("Failed to initialize the dashboard");
+            }
+        }
+
+        // Initialize everything
+        init();
+    </script>
+</body>
+
+</html>

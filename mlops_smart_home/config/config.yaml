@@ -1,0 +1,19 @@
+data:
+  raw_data_path: "../data/smart_home_dataset.csv"
+  processed_data_path: "data/processed/feature_store.parquet"
+  predictions_path: "data/predictions/"
+
+mlflow:
+  tracking_uri: "http://localhost:5000"
+  experiment_name: "smart_home_activity_prediction"
+
+model:
+  type: "RandomForestClassifier"
+  params:
+    n_estimators: 100
+    max_depth: 10
+    random_state: 42
+
+monitoring:
+  drift_threshold: 0.1
+  monitoring_data_path: "data/monitoring/metrics.csv"
